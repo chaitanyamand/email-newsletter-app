@@ -1,0 +1,13 @@
+# Compiled files
+target/
+src/main.exe
+
+# Dependencies
+Cargo.lock
+
+# Environment variables
+.env
+
+# IDE files
+.idea/
+.vscode/
