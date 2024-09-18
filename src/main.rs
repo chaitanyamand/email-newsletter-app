@@ -1,7 +1,7 @@
-use actix_web::main;
 use emailnewsletter::run;
 
-#[main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    return run().await;
+    let _ = run().await.expect("Failed to start the server");
+    Ok(())
 }

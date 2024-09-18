@@ -26,14 +26,18 @@ async fn hello(name: web::Path<String>) -> impl Responder {
     format!("Hello {}!", &name)
 }
 
-pub async fn run() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(index)
-            .service(health_check)
-            .service(hello)
+pub fn run() -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async {
+        HttpServer::new(|| {
+            App::new()
+                .service(index)
+                .service(health_check)
+                .service(hello)
+        })
+        .bind(("127.0.0.1", 8080))
+        .expect("Failed to bind address")
+        .run()
+        .await
+        .expect("Server failed");
     })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
 }
