@@ -1,10 +1,10 @@
 use actix_web::{get, web, App, HttpServer, Responder};
 use serde::Serialize;
+use std::net::TcpListener;
 
 #[derive(Serialize)]
 struct MyResponse {
     message: String,
-    status: u32,
 }
 
 #[get("/")]
@@ -15,8 +15,7 @@ async fn index() -> impl Responder {
 #[get("/health_check")]
 async fn health_check() -> impl Responder {
     let response = MyResponse {
-        message: "server is healthy".to_string(),
-        status: 200,
+        message: String::from("server is healthy"),
     };
     return web::Json(response);
 }
@@ -26,7 +25,7 @@ async fn hello(name: web::Path<String>) -> impl Responder {
     format!("Hello {}!", &name)
 }
 
-pub fn run() -> tokio::task::JoinHandle<()> {
+pub fn run(listener: TcpListener) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async {
         HttpServer::new(|| {
             App::new()
@@ -34,7 +33,7 @@ pub fn run() -> tokio::task::JoinHandle<()> {
                 .service(health_check)
                 .service(hello)
         })
-        .bind(("127.0.0.1", 8080))
+        .listen(listener)
         .expect("Failed to bind address")
         .run()
         .await
