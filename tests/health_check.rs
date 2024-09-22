@@ -1,4 +1,4 @@
-use emailnewsletter::run;
+use emailnewsletter::startup::run;
 use reqwest::Client;
 use serde_json::Value;
 use std::net::TcpListener;
