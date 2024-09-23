@@ -1,18 +1,18 @@
 use crate::routes::health_check;
 use crate::routes::subscribe;
 use actix_web::{web, App, HttpServer};
-use sqlx::PgConnection;
+use sqlx::PgPool;
 use std::net::TcpListener;
 
-pub fn run(listener: TcpListener, connection: PgConnection) -> tokio::task::JoinHandle<()> {
-    let connection = web::Data::new(connection);
+pub fn run(listener: TcpListener, db_pool: PgPool) -> tokio::task::JoinHandle<()> {
+    let db_pool = web::Data::new(db_pool);
 
     tokio::spawn(async move {
         HttpServer::new(move || {
             App::new()
                 .service(health_check)
                 .service(subscribe)
-                .app_data(connection.clone())
+                .app_data(db_pool.clone())
         })
         .listen(listener)
         .expect("Failed to bind address")

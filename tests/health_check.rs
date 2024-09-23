@@ -2,7 +2,7 @@ use dotenv;
 use emailnewsletter::{configuration::get_configurations, startup::run};
 use reqwest::Client;
 use serde_json::Value;
-use sqlx::{Connection, PgConnection};
+use sqlx::PgPool;
 use std::net::TcpListener;
 use tokio::time::{sleep, Duration};
 
@@ -11,11 +11,11 @@ async fn spawn_test_server() -> String {
         TcpListener::bind("127.0.0.1:0").expect("Failed to bind random address");
     let port = listener.local_addr().unwrap().port();
     let configuration = get_configurations().expect("Failed to read configuration");
-    let connection = PgConnection::connect(&configuration.database.connection_string())
+    let db_pool = PgPool::connect(&configuration.database.connection_string())
         .await
         .expect("Failed to connect to postgres");
 
-    let _server = run(listener, connection);
+    let _server = run(listener, db_pool);
     format!("http://127.0.0.1:{}", port)
 }
 
@@ -47,7 +47,7 @@ async fn subscribe_returns_200_when_data_is_valid() {
     let configuration = get_configurations().expect("Failed to retreive configurations");
     let connection_string = configuration.database.connection_string();
 
-    let mut connection = PgConnection::connect(&connection_string)
+    let db_pool = PgPool::connect(&connection_string)
         .await
         .expect("Failed to connect to Postgres");
 
@@ -65,9 +65,9 @@ async fn subscribe_returns_200_when_data_is_valid() {
     assert_eq!(response.status().as_u16(), 200, "Status code was not 200");
 
     let saved = sqlx::query!("SELECT email,name FROM subscriptions")
-        .fetch_one(&mut connection)
+        .fetch_one(&db_pool)
         .await
-        .expect("Failed to fetch saved subscribtion");
+        .expect("Failed to fetch saved subscription");
 
     assert_eq!(saved.email, "chaitanyam187@gmail.com");
     assert_eq!(saved.name, "chaitanya mandale");
