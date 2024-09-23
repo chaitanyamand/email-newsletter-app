@@ -1,5 +1,6 @@
 use actix_web::{post, web, Responder};
 use serde::Deserialize;
+use sqlx::PgConnection;
 
 #[derive(Deserialize)]
 struct SubscribeRequest {
@@ -8,7 +9,9 @@ struct SubscribeRequest {
 }
 
 #[post("/subscribe")]
-pub async fn subscribe(form: web::Form<SubscribeRequest>) -> impl Responder {
-    let form_data = form.into_inner();
-    format!("name:{} and email:{}", form_data.name, form_data.email)
+pub async fn subscribe(
+    form: web::Form<SubscribeRequest>,
+    _connection: web::Data<PgConnection>,
+) -> impl Responder {
+    format!("Received : name :{} and email:{}", form.name, form.email)
 }

@@ -1,20 +1,29 @@
-use emailnewsletter::startup::run;
+use dotenv;
+use emailnewsletter::{configuration::get_configurations, startup::run};
 use reqwest::Client;
 use serde_json::Value;
+use sqlx::{Connection, PgConnection};
 use std::net::TcpListener;
 use tokio::time::{sleep, Duration};
 
-fn spawn_test_server() -> String {
+async fn spawn_test_server() -> String {
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:0").expect("Failed to bind random address");
     let port = listener.local_addr().unwrap().port();
-    let _server = run(listener);
+    let configuration = get_configurations().expect("Failed to read configuration");
+    let connection = PgConnection::connect(&configuration.database.connection_string())
+        .await
+        .expect("Failed to connect to postgres");
+
+    let _server = run(listener, connection);
     format!("http://127.0.0.1:{}", port)
 }
 
 #[tokio::test]
 async fn health_check_works() {
-    let req_address = spawn_test_server();
+    dotenv::dotenv().ok();
+
+    let req_address = spawn_test_server().await;
     sleep(Duration::from_secs(2)).await;
 
     let client = Client::new();
@@ -32,8 +41,15 @@ async fn health_check_works() {
 
 #[tokio::test]
 async fn subscribe_returns_200_when_data_is_valid() {
-    let req_address = spawn_test_server();
+    let req_address = spawn_test_server().await;
     sleep(Duration::from_secs(2)).await;
+
+    let configuration = get_configurations().expect("Failed to retreive configurations");
+    let connection_string = configuration.database.connection_string();
+
+    let mut connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Failed to connect to Postgres");
 
     let client = Client::new();
     let url = format!("{}/subscribe", req_address);
@@ -47,11 +63,19 @@ async fn subscribe_returns_200_when_data_is_valid() {
         .expect("Failed to send POST request");
 
     assert_eq!(response.status().as_u16(), 200, "Status code was not 200");
+
+    let saved = sqlx::query!("SELECT email,name FROM subscriptions")
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscribtion");
+
+    assert_eq!(saved.email, "chaitanyam187@gmail.com");
+    assert_eq!(saved.name, "chaitanya mandale");
 }
 
 #[tokio::test]
 async fn subscribe_returns_400_when_data_is_invalid() {
-    let req_address = spawn_test_server();
+    let req_address = spawn_test_server().await;
     sleep(Duration::from_secs(2)).await;
 
     let client = Client::new();
