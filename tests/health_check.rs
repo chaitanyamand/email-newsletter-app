@@ -1,29 +1,63 @@
 use dotenv;
-use emailnewsletter::{configuration::get_configurations, startup::run};
+use emailnewsletter::{
+    configuration::get_configurations, configuration::DatabaseSettings, startup::run,
+};
 use reqwest::Client;
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use tokio::time::{sleep, Duration};
+use uuid::Uuid;
 
-async fn spawn_test_server() -> String {
+pub struct TestApp {
+    pub address: String,
+    pub db_pool: PgPool,
+}
+
+async fn spawn_test_server() -> TestApp {
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:0").expect("Failed to bind random address");
     let port = listener.local_addr().unwrap().port();
-    let configuration = get_configurations().expect("Failed to read configuration");
-    let db_pool = PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failed to connect to postgres");
 
-    let _server = run(listener, db_pool);
-    format!("http://127.0.0.1:{}", port)
+    let mut configuration = get_configurations().expect("Failed to read configuration");
+    configuration.database.database_name = Uuid::new_v4().to_string();
+
+    let pool = configure_database(&configuration.database).await;
+
+    let _server = run(listener, pool.clone());
+
+    TestApp {
+        address: format!("http://127.0.0.1:{}", port),
+        db_pool: pool,
+    }
+}
+
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
+
+    let connection_pool = PgPool::connect(&config.connection_string())
+        .await
+        .expect("Failed to connect to Postgres.");
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
+
+    connection_pool
 }
 
 #[tokio::test]
 async fn health_check_works() {
     dotenv::dotenv().ok();
 
-    let req_address = spawn_test_server().await;
+    let test_app = spawn_test_server().await;
+    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
     let client = Client::new();
@@ -41,15 +75,11 @@ async fn health_check_works() {
 
 #[tokio::test]
 async fn subscribe_returns_200_when_data_is_valid() {
-    let req_address = spawn_test_server().await;
+    let test_app = spawn_test_server().await;
+    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
-    let configuration = get_configurations().expect("Failed to retreive configurations");
-    let connection_string = configuration.database.connection_string();
-
-    let db_pool = PgPool::connect(&connection_string)
-        .await
-        .expect("Failed to connect to Postgres");
+    let db_pool = test_app.db_pool;
 
     let client = Client::new();
     let url = format!("{}/subscribe", req_address);
@@ -75,7 +105,8 @@ async fn subscribe_returns_200_when_data_is_valid() {
 
 #[tokio::test]
 async fn subscribe_returns_400_when_data_is_invalid() {
-    let req_address = spawn_test_server().await;
+    let test_app = spawn_test_server().await;
+    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
     let client = Client::new();
