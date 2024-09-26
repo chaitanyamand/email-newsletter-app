@@ -1,6 +1,5 @@
-use crate::routes::health_check;
-use crate::routes::subscribe;
-use actix_web::{web, App, HttpServer};
+use crate::routes::{health_check, subscribe};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
 
@@ -10,6 +9,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> tokio::task::JoinHandle<()
     tokio::spawn(async move {
         HttpServer::new(move || {
             App::new()
+                .wrap(Logger::default())
                 .service(health_check)
                 .service(subscribe)
                 .app_data(db_pool.clone())
