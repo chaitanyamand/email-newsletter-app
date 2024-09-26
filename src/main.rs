@@ -1,14 +1,12 @@
 use emailnewsletter::configuration::get_configurations;
 use emailnewsletter::startup::run;
-use env_logger::Env;
+use emailnewsletter::telemetry::{get_subscriber, init_subscriber};
 use sqlx::PgPool;
 use std::net::TcpListener;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
-        .filter_module("sqlx", log::LevelFilter::Off)
-        .init();
+    let subscriber = get_subscriber("emailnewsletter".to_string(), "info".to_string());
+    init_subscriber(subscriber);
 
     let configuration = get_configurations().expect("Failed to read configuration");
     let db_pool = PgPool::connect(&configuration.database.connection_string())

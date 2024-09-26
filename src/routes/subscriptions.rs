@@ -2,6 +2,7 @@ use actix_web::{post, web, HttpResponse, Responder};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
+use tracing::Instrument;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -17,16 +18,10 @@ pub async fn subscribe(
 ) -> impl Responder {
     let request_id = Uuid::new_v4();
 
-    log::info!(
-        "Request Id - {} : Adding a user with email '{}' and name '{}' as a new subscriber.",
-        request_id,
-        form.email,
-        form.name
-    );
-    log::info!(
-        "Request Id - {} : Saving new subscriber details in the database.",
-        request_id
-    );
+    let request_span = tracing::info_span!("Adding a new subscriber",%request_id,subscriber_email = %form.email,subscriber_name = %form.name);
+    let query_span = tracing::info_span!("Saving new subscriber details in the database",%request_id,subscriber_email = %form.email,subscriber_name = %form.name);
+
+    let _request_span_guard = request_span.enter();
 
     match sqlx::query!(
         r#"
@@ -39,10 +34,11 @@ pub async fn subscribe(
         Utc::now()
     )
     .execute(db_pool.get_ref())
+    .instrument(query_span)
     .await
     {
         Ok(_) => {
-            log::info!(
+            tracing::info!(
                 "Request Id - {} : New subscriber details have been saved.",
                 request_id
             );
@@ -50,7 +46,7 @@ pub async fn subscribe(
         }
 
         Err(e) => {
-            log::error!(
+            tracing::error!(
                 "Request Id - {} : Failed to execute query:{:?}",
                 request_id,
                 e
