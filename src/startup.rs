@@ -1,7 +1,8 @@
 use crate::routes::{health_check, subscribe};
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
+use tracing_actix_web::TracingLogger;
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> tokio::task::JoinHandle<()> {
     let db_pool = web::Data::new(db_pool);
@@ -9,7 +10,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> tokio::task::JoinHandle<()
     tokio::spawn(async move {
         HttpServer::new(move || {
             App::new()
-                .wrap(Logger::default())
+                .wrap(TracingLogger::default())
                 .service(health_check)
                 .service(subscribe)
                 .app_data(db_pool.clone())
