@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use std::net::TcpListener;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let subscriber = get_subscriber("emailnewsletter".to_string(), "info".to_string());
+    let subscriber = get_subscriber("emailnewsletter".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 
     let configuration = get_configurations().expect("Failed to read configuration");

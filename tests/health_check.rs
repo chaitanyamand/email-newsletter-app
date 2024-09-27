@@ -1,7 +1,11 @@
 use dotenv;
 use emailnewsletter::{
-    configuration::get_configurations, configuration::DatabaseSettings, startup::run,
+    configuration::get_configurations,
+    configuration::DatabaseSettings,
+    startup::run,
+    telemetry::{get_subscriber, init_subscriber},
 };
+use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde_json::Value;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
@@ -14,7 +18,21 @@ pub struct TestApp {
     pub db_pool: PgPool,
 }
 
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
+    }
+});
+
 async fn spawn_test_server() -> TestApp {
+    Lazy::force(&TRACING);
+
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:0").expect("Failed to bind random address");
     let port = listener.local_addr().unwrap().port();
