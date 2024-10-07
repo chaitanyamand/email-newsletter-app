@@ -10,5 +10,4 @@ ENV SQLX_OFFLINE TRUE
 
 RUN cargo build --release
 
-ENTRYPOINT [ "./target/debug/emailnewsletter" ]
-
+ENTRYPOINT ["./target/release/emailnewsletter"]
