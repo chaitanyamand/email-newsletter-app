@@ -14,8 +14,11 @@ async fn main() -> std::io::Result<()> {
     let db_pool = PgPool::connect_lazy(&configuration.database.connection_string().expose_secret())
         .expect("Failed to connect to postgres");
 
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", configuration.application.port))
-        .expect("Failed to bind port 8000");
+    let listener = TcpListener::bind(format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    ))
+    .expect("Failed to bind port 8000");
     run(listener, db_pool)
         .await
         .expect("Failed to start the server");
