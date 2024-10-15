@@ -2,24 +2,14 @@ use actix_web::{post, web, HttpResponse, Responder};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
-use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
+
+use crate::domain::{NewSubscriber, SubscriberName};
 
 #[derive(Deserialize)]
 struct SubscribeRequest {
     name: String,
     email: String,
-}
-
-fn is_valid_name(name: &str) -> bool {
-    let is_empty = name.trim().is_empty();
-
-    let is_too_long = name.graphemes(true).count() > 256;
-
-    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-    let contains_forbidden_characters = name.chars().any(|g| forbidden_characters.contains(&g));
-
-    return !(is_empty || is_too_long || contains_forbidden_characters);
 }
 
 #[tracing::instrument(
@@ -35,19 +25,23 @@ pub async fn subscribe(
     form: web::Form<SubscribeRequest>,
     db_pool: web::Data<PgPool>,
 ) -> impl Responder {
-    if !is_valid_name(&form.name) {
-        return HttpResponse::BadRequest().finish();
-    }
+    let new_subscriber = NewSubscriber {
+        email: form.0.email,
+        name: SubscriberName::parse(form.0.name),
+    };
 
-    match insert_subscriber(&form, &db_pool).await {
+    match insert_subscriber(&new_subscriber, &db_pool).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
-#[tracing::instrument(name = "Saving new subscriber in the database", skip(form, db_pool))]
+#[tracing::instrument(
+    name = "Saving new subscriber in the database",
+    skip(new_subscriber, db_pool)
+)]
 pub async fn insert_subscriber(
-    form: &SubscribeRequest,
+    new_subscriber: &NewSubscriber,
     db_pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
@@ -56,8 +50,8 @@ pub async fn insert_subscriber(
         VALUES($1,$2,$3,$4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        new_subscriber.email,
+        new_subscriber.name.as_ref(),
         Utc::now()
     )
     .execute(db_pool)
