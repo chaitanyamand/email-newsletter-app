@@ -154,7 +154,7 @@ async fn subscribe_returns_400_when_data_is_invalid() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
+async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
     let test_app = spawn_test_server().await;
     let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
@@ -179,7 +179,7 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
             .expect("Failed to execute request");
 
         assert_eq!(
-            200,
+            400,
             response.status().as_u16(),
             "The API did not return a 200 OK when the payload was {}",
             description
