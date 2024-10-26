@@ -1,7 +1,7 @@
 use dotenv;
 use emailnewsletter::{
-    configuration::get_configurations,
-    configuration::DatabaseSettings,
+    configuration::{get_configurations, DatabaseSettings},
+    email_client::EmailClient,
     startup::run,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -40,9 +40,15 @@ async fn spawn_test_server() -> TestApp {
     let mut configuration = get_configurations().expect("Failed to read configuration");
     configuration.database.database_name = Uuid::new_v4().to_string();
 
+    let sender_email = configuration
+        .email_client
+        .sender()
+        .expect("Invalid sender email address");
+    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email);
+
     let pool = configure_database(&configuration.database).await;
 
-    let _server = run(listener, pool.clone());
+    let _server = run(listener, pool.clone(), email_client);
 
     TestApp {
         address: format!("http://127.0.0.1:{}", port),
