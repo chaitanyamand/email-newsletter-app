@@ -1,12 +1,10 @@
 use emailnewsletter::{
     configuration::{get_configurations, DatabaseSettings},
-    email_client::EmailClient,
-    startup::run,
+    startup::{get_connection_pool, Application},
     telemetry::{get_subscriber, init_subscriber},
 };
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::net::TcpListener;
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -29,32 +27,22 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub async fn spawn_test_server() -> TestApp {
     Lazy::force(&TRACING);
 
-    let listener: TcpListener =
-        TcpListener::bind("127.0.0.1:0").expect("Failed to bind random address");
-    let port = listener.local_addr().unwrap().port();
+    let configuration = {
+        let mut c = get_configurations().expect("Failed to read configurations");
+        c.database.database_name = Uuid::new_v4().to_string();
+        c.application.port = 0;
+        c
+    };
+    configure_database(&configuration.database).await;
 
-    let mut configuration = get_configurations().expect("Failed to read configuration");
-    configuration.database.database_name = Uuid::new_v4().to_string();
-
-    let sender_email = configuration
-        .email_client
-        .sender()
-        .expect("Invalid sender email address");
-    let timeout = configuration.email_client.timeout();
-    let email_client = EmailClient::new(
-        configuration.email_client.base_url,
-        sender_email,
-        configuration.email_client.authorization_token,
-        timeout,
-    );
-
-    let pool = configure_database(&configuration.database).await;
-
-    let _server = run(listener, pool.clone(), email_client);
+    let application =
+        Application::build(configuration.clone()).expect("Failed to build application");
+    let address = format!("http://127.0.0.1:{}", application.port());
+    let _ = tokio::spawn(application.run_until_stopped());
 
     TestApp {
-        address: format!("http://127.0.0.1:{}", port),
-        db_pool: pool,
+        db_pool: get_connection_pool(&configuration.database),
+        address,
     }
 }
 
