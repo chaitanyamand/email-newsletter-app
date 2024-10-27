@@ -1,30 +1,18 @@
 use crate::helpers::spawn_test_server;
-use reqwest::Client;
 use tokio::time::{sleep, Duration};
 
 #[tokio::test]
 async fn subscribe_returns_200_when_data_is_valid() {
     let test_app = spawn_test_server().await;
-    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
-    let db_pool = test_app.db_pool;
-
-    let client = Client::new();
-    let url = format!("{}/subscribe", req_address);
     let body = "name=chaitanya%20mandale&email=chaitanyam187%40gmail.com";
-    let response = client
-        .post(url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .expect("Failed to send POST request");
+    let response = test_app.post_subscriptions(body.into()).await;
 
     assert_eq!(response.status().as_u16(), 200, "Status code was not 200");
 
     let saved = sqlx::query!("SELECT email,name FROM subscriptions")
-        .fetch_one(&db_pool)
+        .fetch_one(&test_app.db_pool)
         .await
         .expect("Failed to fetch saved subscription");
 
@@ -35,11 +23,8 @@ async fn subscribe_returns_200_when_data_is_valid() {
 #[tokio::test]
 async fn subscribe_returns_400_when_data_is_invalid() {
     let test_app = spawn_test_server().await;
-    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
-    let client = Client::new();
-    let url = format!("{}/subscribe", req_address);
     let test_cases = vec![
         ("name=chaitanya%20mandale", "email not sent"),
         ("email=chaitanyam187%40gmail.com", "name not sent"),
@@ -47,13 +32,7 @@ async fn subscribe_returns_400_when_data_is_invalid() {
     ];
 
     for (body, error_message) in test_cases {
-        let response = client
-            .post(url.clone())
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .expect("Failed to send post request");
+        let response = test_app.post_subscriptions(body.into()).await;
 
         assert_eq!(
             response.status().as_u16(),
@@ -67,10 +46,8 @@ async fn subscribe_returns_400_when_data_is_invalid() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
     let test_app = spawn_test_server().await;
-    let req_address = test_app.address;
     sleep(Duration::from_secs(2)).await;
 
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=chaitanyam187%40gmail.com", "empty name"),
         ("name=chaitanya%20mandale&email=", "empty email"),
@@ -81,13 +58,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
     ];
 
     for (body, description) in test_cases {
-        let response = client
-            .post(&format!("{}/subscribe", req_address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .expect("Failed to execute request");
+        let response = test_app.post_subscriptions(body.into()).await;
 
         assert_eq!(
             400,
