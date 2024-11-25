@@ -1,4 +1,5 @@
 use crate::configuration::{DatabaseSettings, Settings};
+use crate::routes::confirm;
 use crate::{
     email_client::EmailClient,
     routes::{health_check, subscribe},
@@ -29,6 +30,7 @@ pub fn run(
             .wrap(TracingLogger::default())
             .service(health_check)
             .service(subscribe)
+            .service(confirm)
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
     })
