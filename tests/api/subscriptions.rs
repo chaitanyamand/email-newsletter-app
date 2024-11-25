@@ -1,5 +1,7 @@
 use crate::helpers::spawn_test_server;
 use tokio::time::{sleep, Duration};
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn subscribe_returns_200_when_data_is_valid() {
@@ -7,6 +9,13 @@ async fn subscribe_returns_200_when_data_is_valid() {
     sleep(Duration::from_secs(2)).await;
 
     let body = "name=chaitanya%20mandale&email=chaitanyam187%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&test_app.email_server)
+        .await;
+
     let response = test_app.post_subscriptions(body.into()).await;
 
     assert_eq!(response.status().as_u16(), 200, "Status code was not 200");
@@ -67,4 +76,19 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
             description
         );
     }
+}
+
+#[tokio::test]
+async fn subscribe_sends_a_confirmation_email_for_valid_data() {
+    let test_app = spawn_test_server().await;
+    let body = "name=chaitanya%20mandale&email=chaitanyam187%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&test_app.email_server)
+        .await;
+
+    test_app.post_subscriptions(body.into()).await;
 }
