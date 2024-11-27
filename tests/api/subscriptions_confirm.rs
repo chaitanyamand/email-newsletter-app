@@ -61,3 +61,17 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     assert_eq!(saved.name, "chaitanya mandale");
     assert_eq!(saved.status, "confirmed");
 }
+
+#[tokio::test]
+async fn passing_in_invalid_subscription_token_returns_401() {
+    let test_app = spawn_test_server().await;
+
+    let response = reqwest::get(&format!(
+        "{}/subscriptions/confirm?subscription_token=randominvalidtoken",
+        test_app.address
+    ))
+    .await
+    .unwrap();
+
+    assert_eq!(response.status().as_u16(), 401);
+}
