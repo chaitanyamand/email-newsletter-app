@@ -1,6 +1,5 @@
 use actix_web::{get, web, HttpResponse, ResponseError};
 use anyhow::Context;
-use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -35,13 +34,7 @@ pub enum ConfirmError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-impl ResponseError for ConfirmError {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            ConfirmError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
+impl ResponseError for ConfirmError {}
 
 impl std::fmt::Debug for ConfirmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -70,10 +63,7 @@ pub async fn confirm_subscriber(db_pool: &PgPool, subscriber_id: Uuid) -> Result
     )
     .execute(db_pool)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .map_err(|e| e)?;
     Ok(())
 }
 
@@ -91,9 +81,6 @@ pub async fn get_subscriber_id_from_token(
     )
     .fetch_optional(db_pool)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .map_err(|e| e)?;
     Ok(result.map(|r| r.subscriber_id))
 }
