@@ -1,0 +1,14 @@
+1. Docker Builds-  Use slim images and employ multi-stage docker-build — more pace optimised
+2. Test Driven Development i.e. approaches like RedTest-GreenTest Loop
+3. For User Inputs, Don’t Validate, PARSE — Type Driven Development — Based on parsed type, can be known that specific variable is definitely validated
+4. Breakdown functions — No lengthy functions
+5. While DB Operations, have DB Pool — more performant
+6. If there is code duplication, make a separate function — helps in readability and maintainabilty (HUGELY!)
+7. Always have good telemetry — Helps a lot in debugging
+8. While testing external service like server (API) use mock server through a library to ensure you are forming requests correctly
+9. In Testing, try to setup test server on any free port (instead of hard-coding port)
+10. Have proper folder structure which  include scripts directory to spin up services like DB or Docker Containers or to migrate databases with just one click
+11. Have configuration folder with tree structure (root as base configurations and leafs as local and production configurations) and a file which merges these yaml configurations (easy, readable, highly used across industry) into application-native structs or classes (types)
+12. For Zero Downtime Deployment, use approaches like Rolling Update Deployment (Also read more about Blue-Green deployment and Canary deployment strategies)
+13. When a function uses too much data members of a type (class or struct), make it a method of that type (cautiously because you might end up illogically linking functions with classes)
+14. Have good error messages for end-users — they should be able to figure out what input changes are required to get rid of errors
