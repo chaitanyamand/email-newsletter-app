@@ -12,3 +12,4 @@
 12. For Zero Downtime Deployment, use approaches like Rolling Update Deployment (Also read more about Blue-Green deployment and Canary deployment strategies)
 13. When a function uses too much data members of a type (class or struct), make it a method of that type (cautiously because you might end up illogically linking functions with classes)
 14. Have good error messages for end-users — they should be able to figure out what input changes are required to get rid of errors
+15. During DB operations of Integration Testing, make sure that Production (Or Local) DB isn’t even touched. Consider creating a random database for each test and use that to do all DB operations  
