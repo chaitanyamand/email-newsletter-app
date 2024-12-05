@@ -11,8 +11,8 @@ path="src/main.rs"
 name="emailnewsletter"
 
 [dependencies]
-reqwest = { version = "0.11", default-features = false, features = ["json","rustls-tls"] }
-actix-web = { version = "4.4.0", default-features = false, features = ["macros"] }
+reqwest = { version = "0.11", default-features = false, features = ["json","rustls-tls","cookies"] }
+actix-web = { version = "4.4.0", default-features = false, features = ["macros","cookies"] }
 tokio = { version = "1.40.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
