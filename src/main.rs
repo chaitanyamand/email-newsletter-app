@@ -1,4 +1,3 @@
-use actix_web::cookie::time::Result;
 use emailnewsletter::configuration::get_configurations;
 use emailnewsletter::startup::Application;
 use emailnewsletter::telemetry::{get_subscriber, init_subscriber};
