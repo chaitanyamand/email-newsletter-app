@@ -1,8 +1,8 @@
 use crate::{
     authentication::{validate_credentials, AuthError, Credentials},
     routes::error_chain_fmt,
+    session_state::TypedSession,
 };
-use actix_session::Session;
 use actix_web::{error::InternalError, http::header::LOCATION, Result};
 use actix_web::{post, web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
@@ -34,7 +34,7 @@ pub struct FormData {
 pub async fn verify_login(
     form: web::Form<FormData>,
     db_pool: web::Data<PgPool>,
-    session: Session,
+    session: TypedSession,
 ) -> Result<HttpResponse, InternalError<LoginError>> {
     let credentials = Credentials {
         username: form.0.username,
@@ -46,7 +46,7 @@ pub async fn verify_login(
             tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
             session.renew();
             session
-                .insert("user_id", user_id)
+                .insert_user_id(user_id)
                 .map_err(|e| login_direct(LoginError::UnexpectedError(e.into())))?;
             Ok(HttpResponse::SeeOther()
                 .insert_header((LOCATION, "/admin/dashboard"))
