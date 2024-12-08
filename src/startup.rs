@@ -1,6 +1,7 @@
 use crate::configuration::{DatabaseSettings, Settings};
 use crate::routes::{
-    admin_dashboard, confirm, get_home, login_form, publish_newsletter, verify_login,
+    admin_dashboard, change_password, change_password_form, confirm, get_home, login_form,
+    publish_newsletter, verify_login,
 };
 use crate::{
     email_client::EmailClient,
@@ -59,6 +60,8 @@ pub async fn run(
             .service(login_form)
             .service(verify_login)
             .service(admin_dashboard)
+            .service(change_password)
+            .service(change_password_form)
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
