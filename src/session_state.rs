@@ -16,6 +16,10 @@ impl TypedSession {
         self.0.insert(Self::USER_ID_KEY, user_id)
     }
 
+    pub fn log_out(&self) {
+        self.0.purge()
+    }
+
     pub fn get_user_id(&self) -> Result<Option<Uuid>, SessionGetError> {
         self.0.get(Self::USER_ID_KEY)
     }
