@@ -46,3 +46,4 @@ urlencoding = "2"
 htmlescape = "0.3" 
 actix-web-flash-messages = {version = "0.3", features = ["cookies"]}
 actix-session = {version = "0.10", features = ["redis-session"]}
+actix-web-lab = "0.15"

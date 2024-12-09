@@ -1,4 +1,3 @@
-use actix_web::get;
 use actix_web::http::header::ContentType;
 use actix_web::web;
 use actix_web::HttpResponse;
@@ -16,7 +15,6 @@ where
     actix_web::error::ErrorInternalServerError(e)
 }
 
-#[get("/admin/dashboard")]
 pub async fn admin_dashboard(
     session: TypedSession,
     pool: web::Data<PgPool>,
