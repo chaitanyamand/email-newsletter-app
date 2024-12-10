@@ -53,6 +53,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         "title": "Newsletter title",
         "content_text": "Newsletter body as plain text",
         "content_html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key" : uuid::Uuid::new_v4().to_string()
     });
     let response = test_app
         .post_publish_newsletter(&newsletter_request_body)
@@ -82,6 +83,8 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         "title": "Newsletter title",
         "content_text": "Newsletter body as plain text",
         "content_html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key" : uuid::Uuid::new_v4().to_string()
+
     });
     let response = test_app
         .post_publish_newsletter(&newsletter_request_body)
@@ -110,10 +113,50 @@ async fn you_must_be_logged_in_to_publish_a_newsletter() {
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain text",
         "html_content": "<p>Newsletter body as HTML</p>",
+        "idempotency_key" : uuid::Uuid::new_v4().to_string()
     });
     let response = test_app
         .post_publish_newsletter(&newsletter_request_body)
         .await;
 
     assert_is_redirected_to(&response, "/login");
+}
+
+#[tokio::test]
+async fn newsletter_creation_is_idempotent() {
+    let test_app = spawn_test_server().await;
+    create_confirmed_subscriber(&test_app).await;
+    test_app.test_user.login(&test_app).await;
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&test_app.email_server)
+        .await;
+
+    // Submit newsletter form
+    let newsletter_request_body = serde_json::json!({
+    "title": "Newsletter title",
+    "text_content": "Newsletter body as plain text",
+    "html_content": "<p>Newsletter body as HTML</p>",
+    "idempotency_key": uuid::Uuid::new_v4().to_string()
+    });
+    let response = test_app
+        .post_publish_newsletter(&newsletter_request_body)
+        .await;
+    assert_is_redirected_to(&response, "/admin/newsletters");
+
+    // Follow the redirect
+    let html_page = test_app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    // Submit newsletter form **again**
+    let response = test_app
+        .post_publish_newsletter(&newsletter_request_body)
+        .await;
+    assert_is_redirected_to(&response, "/admin/newsletters");
+
+    // Follow the redirect
+    let html_page = test_app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
 }
