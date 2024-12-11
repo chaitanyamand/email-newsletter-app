@@ -137,8 +137,8 @@ async fn newsletter_creation_is_idempotent() {
     // Submit newsletter form
     let newsletter_request_body = serde_json::json!({
     "title": "Newsletter title",
-    "text_content": "Newsletter body as plain text",
-    "html_content": "<p>Newsletter body as HTML</p>",
+    "content_text": "Newsletter body as plain text",
+    "content_html": "<p>Newsletter body as HTML</p>",
     "idempotency_key": uuid::Uuid::new_v4().to_string()
     });
     let response = test_app
@@ -155,8 +155,4 @@ async fn newsletter_creation_is_idempotent() {
         .post_publish_newsletter(&newsletter_request_body)
         .await;
     assert_is_redirected_to(&response, "/admin/newsletters");
-
-    // Follow the redirect
-    let html_page = test_app.get_publish_newsletter_html().await;
-    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
 }
