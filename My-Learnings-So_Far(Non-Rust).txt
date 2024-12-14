@@ -3,7 +3,7 @@
 3. For User Inputs, Don’t Validate, PARSE — Type Driven Development — Based on parsed type, can be known that specific variable is definitely validated
 4. Breakdown functions — No lengthy functions
 5. While DB Operations, have DB Pool — more performant
-6. If there is code duplication, make a separate function — helps in readability and maintainabilty (HUGELY!)
+6. If there is code duplication, make a separate function — Helps in readability and maintainabilty (HUGELY!)
 7. Always have good telemetry — Helps a lot in debugging
 8. While testing external service like server (API) use mock server through a library to ensure you are forming requests correctly
 9. In Testing, try to setup test server on any free port (instead of hard-coding port)
@@ -15,3 +15,4 @@
 15. During DB operations of Integration Testing, make sure that Production (Or Local) DB isn’t even touched. Consider creating a random database for each test and use that to do all DB operations  
 16. More Time the hashing algo takes to hash inputs, secure it is. Consider using Argon (Takes long time to hash provided we follow OWASP guidelines for parameters) instead of SHA/Other Algos.
 17. Provide all context required by server to handle requests (like DB-Pool,Email Client) to it -- Helps in testing in different environments and to prevent unnecessary module dependencies
+18. Consider making your business-critical endpoints idempotent (retry-safe) - Helps avoiding unnecessary side effects (like payment or email delivery) for duplicate requests 
